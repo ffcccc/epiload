@@ -27,81 +27,148 @@ No R bindings are currently included. Consumers must use compatible compiler,
 architecture, and runtime settings; the bridge does not promise a stable C++ ABI
 across toolchains.
 
-## Building on Windows
+## Building
+
+GNU Make is the reference build interface; Microsoft's `nmake` is not supported.
+Only native x64 builds are supported. Cross-compilation and macOS are not configured.
+
+| Setting | Windows | Linux (including WSL) |
+| --- | --- | --- |
+| Rust target | `x86_64-pc-windows-msvc` | `x86_64-unknown-linux-gnu` |
+| Recipe shell | `cmd.exe` from `COMSPEC`, `/D /S /C` | `/bin/bash`, `-eu -o pipefail -c` |
+| Bootstrap Python | `py` | `python3` |
+| Python environment | `.venv` | `.venv-linux` |
+| C/C++ toolchain | MSVC `cl`, Windows SDK | `gcc` and `g++`, glibc development files |
+| Rust library | `bed_reader_bridge.lib` | `libbed_reader_bridge.a` |
+| Demo | `build/<target>/demo.exe` | `build/<target>/demo` |
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) with the `x86_64-pc-windows-msvc` toolchain.
-- Visual Studio C++ Build Tools with x64 C++ tools and a Windows SDK.
-- Python 3.
-- GNU Make, available as `make` or `mingw32-make`. The Makefile is not compatible
-	with Microsoft's `nmake`.
+Both platforms require x64 Python 3.12+ with `venv` and pip, Rust installed through
+[rustup](https://rustup.rs/), and GNU Make. `setup` installs PyYAML into the local
+environment. `bed-reader` requires Python at Rust build time; Make exports
+`PYO3_PYTHON` automatically, defaulting to the selected environment's interpreter.
+An existing environment variable or Make command-line assignment can override it.
 
-The supplied Makefile targets Windows x64 with MSVC. Linux and macOS builds are
-not configured by this Makefile.
+On Windows, install native Windows GNU Make (tested with the WinGet package
+`ezwinports.make`) and Visual Studio C++ Build Tools with x64 C++ tools and a
+Windows SDK. Make discovers Build Tools through `vswhere` and initializes
+`VsDevCmd.bat` for both Cargo and the demo compiler. Use the MSVC Rust toolchain:
 
-### Building the Rust Bridge
-
-`bed-reader` 1.1.1 requires Python at build time even when building this C++ bridge.
-If Python is installed but is not on `PATH`, select it explicitly in PowerShell:
-
-```powershell
-$env:PYO3_PYTHON = py -c "import sys; print(sys.executable)"
-cargo build --release
+```text
+rustup toolchain install stable-x86_64-pc-windows-msvc
+rustup default stable-x86_64-pc-windows-msvc
+rustup target add x86_64-pc-windows-msvc
 ```
 
-Alternatively, set `PYO3_PYTHON` to the full path of your Python executable.
-The resulting static library is `target/release/bed_reader_bridge.lib`.
-The generated C++ header is `target/cxxbridge/bed_reader_bridge/src/lib.rs.h`.
+On Linux, install Bash, GNU Make, GCC/G++, development headers, and Python's venv
+support using your distribution's packages. Install Rust's native GNU toolchain:
 
-### Building the C++ Demo
+```bash
+rustup toolchain install stable-x86_64-unknown-linux-gnu
+rustup default stable-x86_64-unknown-linux-gnu
+rustup target add x86_64-unknown-linux-gnu
+```
 
-The Makefile locates Visual Studio C++ Build Tools using `vswhere` and initializes
-the x64 compiler environment automatically. From a regular PowerShell terminal
-at the project root, with `PYO3_PYTHON` configured as above:
+### Shells and VS Code
 
-```powershell
+The Makefile uses GNU Make syntax, while recipes use the explicitly selected host
+shell shown above. The terminal launching Make does not choose the recipe shell.
+PowerShell, CMD, and Git Bash can launch the same native Windows Make executable;
+Git Bash does not select Linux or MinGW/GCC builds. MSYS/Cygwin Make is not the
+supported Windows Make distribution. WSL is Linux: use Linux Python, Rust, and GCC
+inside WSL, not the Windows executables. Never share a venv across the two hosts.
+
+Open the folder locally on Windows or through VS Code Remote WSL on Linux.
+`.vscode/tasks.json` invokes Make as a process from the project root, avoiding
+terminal-specific command quoting. It provides setup, doctor, build, dependency,
+test, and install tasks. GNU Make must be on the VS Code process's `PATH`.
+
+### Build Commands
+
+Run these commands from the project root on either platform:
+
+```text
+make setup
+make doctor
 make
-```
-
-The Makefile uses GNU Make (`make` or `mingw32-make`), not `nmake`, but compiles
-with the Microsoft `cl` compiler. It builds the Rust library for
-`x86_64-pc-windows-msvc` at
-`target/x86_64-pc-windows-msvc/release/bed_reader_bridge.lib`.
-
-This builds `bed-reader-cpp/demo.exe`. Pass the BED filename when running it:
-
-```powershell
-.\bed-reader-cpp\demo.exe "C:\data\my_genotypes.bed"
-```
-
-Keep the corresponding `.bim` and `.fam` files beside the BED file.
-The header is included directly from
-Cargo's generated directory; no manual copying is needed.
-
-To remove the demo executable:
-
-```powershell
-make clean
-```
-
-### Installing Headers and Libraries Locally
-
-To build the Rust bridge and copy its artifacts into the C++ directory:
-
-```powershell
+make test
 make install
 ```
 
-This creates or updates:
+`make` fetches manifest dependencies and builds the demo. `make rust` builds only
+the Rust library, using `Cargo.lock`. `make test` checks the fetcher without
+network downloads. The demo uses Cargo's generated header directly, so no prior
+`install` is needed. For a dataset smoke test, supply a BED path with its matching
+`.bim` and `.fam` files beside it:
 
-- `bed-reader-cpp/include/bed_reader_bridge.h`
-- `bed-reader-cpp/libs/x86_64-pc-windows-msvc/bed_reader_bridge.lib`
+```text
+make smoke SMOKE_BED="path/to/study.bed"
+```
 
-This is local staging, not a system-wide installation. For another C++ application,
-add `bed-reader-cpp/include` to its include search path and link the staged library
-along with the Windows system libraries listed in the root `Makefile`.
-Use a compatible MSVC runtime configuration; the demo uses `/MD`.
+The default smoke path is `data/bed-sample-files/small.bed`; sample data is not
+tracked in this repository. Demo invocation examples:
+
+```powershell
+.\build\x86_64-pc-windows-msvc\demo.exe "C:\data\study.bed"
+```
+
+```bash
+./build/x86_64-unknown-linux-gnu/demo /data/study.bed
+```
+
+`make clean` removes the current platform's demo/object directory, not Cargo's
+cache, installed packages, or Python environment. Use `make clean-deps` to remove
+fetched dependencies. Tool variables such as `BOOTSTRAP_PYTHON`, `PYTHON`, `CC`,
+`CXX`, `CARGO`, and `RUSTUP` can be overridden on Make's command line. For example:
+
+```text
+make setup BOOTSTRAP_PYTHON=python3.12
+```
+
+`BOOTSTRAP_PYTHON` is a command that may include arguments; quote an executable
+path containing spaces inside that command. `PYTHON` is an executable path only.
+`RUST_TARGET` defaults to the host's supported target; incompatible overrides fail
+immediately. Separate checkouts are recommended for simultaneous Windows/WSL
+builds, since generated headers and the dependency staging directory are shared.
+
+### External Dependencies
+
+`deps.yaml` retains its existing platform keys, `windows-x86_64` and
+`linux-x86_64`. Each dependency needs a version and a release asset URL with a
+bare SHA-256 checksum for each supported platform. ZIP and TAR archives are
+supported; `.7z` is not. Dependencies are extracted under
+`3rdparty/<name>/<version>/`. Empty manifests are valid. A `.ready` marker skips
+installed dependencies only when its platform also matches the requested host.
+
+```text
+make deps
+make deps-force
+make deps DEPS_MANIFEST=other-deps.yaml DEPS_ROOT=other-deps
+```
+
+`FETCHER` can also be overridden to select another compatible script. `deps-force`
+redownloads and replaces installed versions. There are currently no active
+external entries in this project's manifest; Cargo handles Rust dependencies.
+
+### Installing and Packaging
+
+`make install` builds the Rust bridge, stages its artifacts, and creates a ZIP
+using Python's standard library; PowerShell and external archivers are not required.
+The archive `bed-reader-cpp/bed-reader-cpp_<target>.zip` contains:
+
+```text
+include/bed_reader_bridge.h
+libs/<target>/<platform-specific Rust static library>
+```
+
+This is local staging, not a system-wide installation. Consumers add the staged
+`include` directory to their search path and link the library plus its native
+system libraries. Windows system libraries are listed in the Makefile; the demo
+uses `/MD`. Linux builds extract native link flags from Rust's
+`--print native-static-libs` output into `build/<target>/native-libs.rsp` and pass
+that response file after the Rust library when linking with G++. Use compatible
+compiler, runtime, glibc, and C++ ABI settings when distributing binaries.
 
 ## Usage Example
 
@@ -142,9 +209,12 @@ from Cargo's generated directory instead of requiring the install step.
 
 ```text
 Cargo.toml                 Rust package and dependencies
-Makefile                   Windows x64 MSVC build and install targets
+Makefile                   Native Windows/MSVC and Linux/GCC builds
 build.rs                   CXX bridge generation and compilation
 src/lib.rs                 Bridge declarations and Rust implementation
+scripts/                   Dependency fetcher and its regression tests
+.vscode/tasks.json         Process-based Make tasks
+build/<target>/            Demo, object files, Linux native link flags
 bed-reader-cpp/
   demo.cpp                 Command-line C++ example
   include/                 Locally staged header (make install)
@@ -152,8 +222,7 @@ bed-reader-cpp/
 target/
   cxxbridge/               Generated C++ headers
   release/                 Default-target Rust release artifacts
-  x86_64-pc-windows-msvc/
-	release/               Explicit MSVC-target release artifacts
+	<target>/release/        Explicit-target Rust release artifacts
 ```
 
 ## Acknowledgments

@@ -1,4 +1,4 @@
-#include "include/bed_reader_bridge.h"
+#include "bed_reader_bridge/src/lib.rs.h"
 #include <iostream>
 
 int main(int argc, char* argv[]) {
