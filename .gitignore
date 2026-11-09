@@ -70,3 +70,7 @@ Testing/
 data/bed-sample-files/
 
 target/
+
+*.zip
+
+.venv/

@@ -61,7 +61,7 @@ the x64 compiler environment automatically. From a regular PowerShell terminal
 at the project root, with `PYO3_PYTHON` configured as above:
 
 ```powershell
-make -C bed-reader-cpp
+make
 ```
 
 The Makefile uses GNU Make (`make` or `mingw32-make`), not `nmake`, but compiles
@@ -82,7 +82,7 @@ Cargo's generated directory; no manual copying is needed.
 To remove the demo executable:
 
 ```powershell
-make -C bed-reader-cpp clean
+make clean
 ```
 
 ### Installing Headers and Libraries Locally
@@ -90,7 +90,7 @@ make -C bed-reader-cpp clean
 To build the Rust bridge and copy its artifacts into the C++ directory:
 
 ```powershell
-make -C bed-reader-cpp install
+make install
 ```
 
 This creates or updates:
@@ -100,7 +100,7 @@ This creates or updates:
 
 This is local staging, not a system-wide installation. For another C++ application,
 add `bed-reader-cpp/include` to its include search path and link the staged library
-along with the Windows system libraries listed in `bed-reader-cpp/Makefile`.
+along with the Windows system libraries listed in the root `Makefile`.
 Use a compatible MSVC runtime configuration; the demo uses `/MD`.
 
 ## Usage Example
@@ -142,11 +142,11 @@ from Cargo's generated directory instead of requiring the install step.
 
 ```text
 Cargo.toml                 Rust package and dependencies
+Makefile                   Windows x64 MSVC build and install targets
 build.rs                   CXX bridge generation and compilation
 src/lib.rs                 Bridge declarations and Rust implementation
 bed-reader-cpp/
   demo.cpp                 Command-line C++ example
-  Makefile                 Windows x64 MSVC build and install targets
   include/                 Locally staged header (make install)
   libs/                    Locally staged static library (make install)
 target/

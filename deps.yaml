@@ -1,0 +1,11 @@
+dependencies:
+  # Demo entries: replace URLs/checksums with your real GitHub Release assets.
+  # foo:
+  #   version: "1.2.3"
+  #   platforms:
+  #     linux-x86_64:
+  #       url: "https://github.com/example/foo/releases/download/v1.2.3/foo-1.2.3-linux-x86_64.tar.gz"
+  #       sha256: "REPLACE_WITH_SHA256"
+  #     windows-x86_64:
+  #       url: "https://github.com/example/foo/releases/download/v1.2.3/foo-1.2.3-windows-x86_64.zip"
+  #       sha256: "REPLACE_WITH_SHA256"
