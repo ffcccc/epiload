@@ -1,32 +1,32 @@
 .DEFAULT_GOAL := all
 
 ifeq ($(OS),Windows_NT)
-override SHELL := $(COMSPEC)
-override .SHELLFLAGS := /D /S /C
-HOST_TARGET := x86_64-pc-windows-msvc
-VENV ?= .venv
-BOOTSTRAP_PYTHON ?= py
-PYTHON ?= $(VENV)/Scripts/python.exe
-export MSYS_NO_PATHCONV := 1
-export MSYS2_ARG_CONV_EXCL := *
+	override SHELL := $(COMSPEC)
+	override .SHELLFLAGS := /D /S /C
+	HOST_TARGET := x86_64-pc-windows-msvc
+	VENV ?= .venv
+	BOOTSTRAP_PYTHON ?= py
+	PYTHON ?= $(VENV)/Scripts/python.exe
+	export MSYS_NO_PATHCONV := 1
+	export MSYS2_ARG_CONV_EXCL := *
 else
-override SHELL := /bin/bash
-override .SHELLFLAGS := -eu -o pipefail -c
-ifneq ($(shell uname -s),Linux)
-$(error Only native Windows/MSVC and Linux/GCC builds are supported)
-endif
-HOST_TARGET := x86_64-unknown-linux-gnu
-ifneq ($(shell uname -m),x86_64)
-$(error Only x86_64 Linux hosts are supported)
-endif
-VENV ?= .venv-linux
-BOOTSTRAP_PYTHON ?= python3
-PYTHON ?= $(VENV)/bin/python
+	override SHELL := /bin/bash
+	override .SHELLFLAGS := -eu -o pipefail -c
+	ifneq ($(shell uname -s),Linux)
+		$(error Only native Windows/MSVC and Linux/GCC builds are supported)
+	endif
+	HOST_TARGET := x86_64-unknown-linux-gnu
+	ifneq ($(shell uname -m),x86_64)
+		$(error Only x86_64 Linux hosts are supported)
+	endif
+	VENV ?= .venv-linux
+	BOOTSTRAP_PYTHON ?= python3
+	PYTHON ?= $(VENV)/bin/python
 endif
 
 RUST_TARGET ?= $(HOST_TARGET)
 ifneq ($(RUST_TARGET),$(HOST_TARGET))
-$(error Target $(RUST_TARGET) is not supported on this host; expected $(HOST_TARGET))
+	$(error Target $(RUST_TARGET) is not supported on this host; expected $(HOST_TARGET))
 endif
 export PYO3_PYTHON ?= $(abspath $(PYTHON))
 DEPS_MANIFEST ?= deps.yaml
@@ -42,32 +42,32 @@ PACKAGE := $(STAGE_DIR)/bed-reader-cpp_$(RUST_TARGET).zip
 SMOKE_BED ?= data/bed-sample-files/small.bed
 
 ifeq ($(OS),Windows_NT)
-ifneq ($(filter default undefined,$(origin CC)),)
-CC := cl
-endif
-ifneq ($(filter default undefined,$(origin CXX)),)
-CXX := cl
-endif
-VSWHERE ?= ${ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe
-VSINSTALL = $(shell "$(VSWHERE)" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath)
-VSDEVCMD ?= $(VSINSTALL)/Common7/Tools/VsDevCmd.bat
-vsrun = call "$(VSDEVCMD)" -arch=x64 -host_arch=x64 >NUL && $(1)
-RUST_LIB := $(RUST_DIR)/bed_reader_bridge.lib
-DEMO := $(BUILD_DIR)/demo.exe
-CPPFLAGS += /I"target/cxxbridge"
-CXXFLAGS += /nologo /std:c++17 /O2 /W4 /EHsc /MD
-LDLIBS += ws2_32.lib userenv.lib bcrypt.lib ntdll.lib crypt32.lib secur32.lib advapi32.lib ncrypt.lib iphlpapi.lib shell32.lib ole32.lib
+	ifneq ($(filter default undefined,$(origin CC)),)
+		CC := cl
+	endif
+	ifneq ($(filter default undefined,$(origin CXX)),)
+		CXX := cl
+	endif
+	VSWHERE ?= ${ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe
+	VSINSTALL = $(shell "$(VSWHERE)" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath)
+	VSDEVCMD ?= $(VSINSTALL)/Common7/Tools/VsDevCmd.bat
+	vsrun = call "$(VSDEVCMD)" -arch=x64 -host_arch=x64 >NUL && $(1)
+	RUST_LIB := $(RUST_DIR)/bed_reader_bridge.lib
+	DEMO := $(BUILD_DIR)/demo.exe
+	CPPFLAGS += /I"target/cxxbridge"
+	CXXFLAGS += /nologo /std:c++17 /O2 /W4 /EHsc /MD
+	LDLIBS += ws2_32.lib userenv.lib bcrypt.lib ntdll.lib crypt32.lib secur32.lib advapi32.lib ncrypt.lib iphlpapi.lib shell32.lib ole32.lib
 else
-ifneq ($(filter default undefined,$(origin CC)),)
-CC := gcc
-endif
-ifneq ($(filter default undefined,$(origin CXX)),)
-CXX := g++
-endif
-RUST_LIB := $(RUST_DIR)/libbed_reader_bridge.a
-DEMO := $(BUILD_DIR)/demo
-CPPFLAGS += -I"target/cxxbridge"
-CXXFLAGS += -std=c++17 -O2 -Wall -Wextra -pthread
+	ifneq ($(filter default undefined,$(origin CC)),)
+		CC := gcc
+	endif
+	ifneq ($(filter default undefined,$(origin CXX)),)
+		CXX := g++
+	endif
+	RUST_LIB := $(RUST_DIR)/libbed_reader_bridge.a
+	DEMO := $(BUILD_DIR)/demo
+	CPPFLAGS += -I"target/cxxbridge"
+	CXXFLAGS += -std=c++17 -O2 -Wall -Wextra -pthread
 endif
 export CC CXX
 
@@ -76,7 +76,7 @@ export CC CXX
 all: deps $(DEMO)
 
 setup:
-	$(BOOTSTRAP_PYTHON) -c "import sys; assert sys.version_info >= (3, 12), 'Python 3.12+ is required'"
+	$(BOOTSTRAP_PYTHON) -c "import sys; assert sys.version_info >= (3, 10), 'Python 3.10+ is required (3.12+ suggested)'"
 	$(BOOTSTRAP_PYTHON) -m venv "$(VENV)"
 	"$(PYTHON)" -m pip install "PyYAML>=6,<7"
 
@@ -88,7 +88,7 @@ deps-force:
 
 doctor:
 	@"$(PYTHON)" --version
-	@"$(PYTHON)" -c "import os, pathlib, platform, sys, yaml; assert sys.version_info >= (3, 12); assert platform.machine().lower() in ('amd64', 'x86_64'), 'x64 Python required'; assert pathlib.Path(os.environ['PYO3_PYTHON']).is_file(), 'PYO3_PYTHON does not exist'; print('PyYAML:', yaml.__version__); print('PYO3_PYTHON:', os.environ['PYO3_PYTHON'])"
+	@"$(PYTHON)" -c "import os, pathlib, platform, sys, yaml; assert sys.version_info >= (3, 10); assert platform.machine().lower() in ('amd64', 'x86_64'), 'x64 Python required'; assert pathlib.Path(os.environ['PYO3_PYTHON']).is_file(), 'PYO3_PYTHON does not exist'; print('PyYAML:', yaml.__version__); print('PYO3_PYTHON:', os.environ['PYO3_PYTHON'])"
 	@$(MAKE) --version
 	@$(CARGO) --version
 	@$(RUSTUP) target list --installed
