@@ -39,7 +39,8 @@ def install(name, spec, root, pkey, force=False):
     version = str(spec["version"]); artifact = spec.get("platforms", {}).get(pkey)
     if not artifact: raise RuntimeError(f"{name}: no artifact for {pkey}")
     dest = root / name / version; ready = dest / ".ready"
-    if ready.exists() and not force:
+    marker = f"{name} {version} {pkey}\n"
+    if ready.exists() and ready.read_text() == marker and not force:
         print(f"[OK] {name} {version}"); return
     expected = artifact["sha256"].lower()
     if expected.startswith("replace_"): raise RuntimeError(f"{name}: replace demo SHA256 in deps.yaml")
@@ -54,12 +55,12 @@ def install(name, spec, root, pkey, force=False):
         safe_extract(archive, staging)
         if dest.exists(): shutil.rmtree(dest)
         shutil.copytree(staging, dest)
-        ready.write_text(f"{name} {version} {pkey}\n")
+        ready.write_text(marker)
         print(f"[INSTALLED] {dest}")
 
 def main():
     ap=argparse.ArgumentParser(); ap.add_argument("--manifest", default="deps.yaml"); ap.add_argument("--root", default="3rdparty"); ap.add_argument("--platform"); ap.add_argument("--force", action="store_true"); args=ap.parse_args()
     data=yaml.safe_load(Path(args.manifest).read_text()); pkey=args.platform or platform_key(); root=Path(args.root)
     print(f"Platform: {pkey}")
-    for name,spec in data.get("dependencies", {}).items(): install(name,spec,root,pkey,args.force)
+    for name,spec in (data.get("dependencies") or {}).items(): install(name,spec,root,pkey,args.force)
 if __name__ == "__main__": main()

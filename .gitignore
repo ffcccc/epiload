@@ -48,6 +48,7 @@ CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile
+!/Makefile
 install_manifest.txt
 compile_commands.json
 
@@ -74,3 +75,6 @@ target/
 *.zip
 
 .venv/
+.venv-linux/
+3rdparty/
+__pycache__/
